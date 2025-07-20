@@ -2,7 +2,7 @@ import enum
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import Enum, ForeignKey, Numeric
+from sqlalchemy import Enum, ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,6 +17,7 @@ class OperationType(enum.Enum):
 class Wallet(Base):
     __tablename__ = "wallets"
 
+    name: Mapped[str] = mapped_column(String(30), nullable=False)
     balance: Mapped[Decimal] = mapped_column(
         Numeric(19, 4),
         nullable=False,

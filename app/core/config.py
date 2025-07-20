@@ -14,6 +14,7 @@ class DatabaseConfig(BaseModel):
     db_name: str = os.getenv("POSTGRES_DB")
     app_host: str = os.getenv("APP_HOST")
     url: PostgresDsn = f"postgresql+asyncpg://{user}:{password}@{app_host}:{port}/{db_name}"
+    echo: bool = False
 
 
 class Settings(BaseSettings):
