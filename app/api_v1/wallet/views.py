@@ -1,10 +1,13 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import EmailStr
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import db_helper
+from app.api_v1.wallet.schemas import WalletResponse
+from app.core import db_helper, logger
 from app.crud.base import test_connection
 from app.crud.wallet import create_wallet_by_email, get_wallet_by_id
 
@@ -34,14 +37,47 @@ async def get_wallet(
     return {"message": "Not found"}
 
 
-@router.post("/create-wallet", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/create-wallet",
+    status_code=status.HTTP_201_CREATED,
+    response_model=WalletResponse,
+)
 async def create_wallet(
-    email: str,
+    email: EmailStr,
     session: Annotated[AsyncSession, Depends(db_helper.sesion_getter)],
-):
-    wallet = await create_wallet_by_email(session, email)
-    if wallet is None:
+) -> WalletResponse:
+    """Создаёт новый кошелёк с указанным email.
 
-        return {"message": "Не удалось создать wallet"}
+    Args:
+        email: Email для создания кошелька (должен быть валидным).
+        session: Асинхронная сессия SQLAlchemy.
 
-    return {"message": wallet}
+    Returns:
+        WalletResponse: Данные созданного кошелька (id и email).
+
+    Raises:
+        HTTPException:
+            - 400: Если email имеет некорректный формат.
+            - 409: Если email уже используется.
+            - 500: Если произошла ошибка сервера.
+    """
+    try:
+        wallet = await create_wallet_by_email(session, email)
+        if wallet is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Кошелёк с таким email уже существует",
+            )
+        logger.info(f"create_wallet: Кошелёк создан для email {email}")
+        return WalletResponse(id=wallet.id, email=wallet.email)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Некорректный формат email",
+        )
+    except SQLAlchemyError as e:
+        logger.error(f"Ошибка при создании кошелька для email {email}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Внутренняя ошибка сервера",
+        )

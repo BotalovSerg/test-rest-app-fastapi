@@ -1,7 +1,7 @@
 import uuid
 
 from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import logger
@@ -24,9 +24,12 @@ async def get_wallet_by_id(
     """
     try:
         stmt = select(Wallet).where(Wallet.id == uuid_wallet)
-        return await session.scalar(stmt)
+        wallet = await session.scalar(stmt)
+        if not wallet:
+            logger.debug(f"Кошелёк с ID {uuid_wallet} не найден")
+        return wallet
     except SQLAlchemyError as e:
-        logger.error(f"Ошибка при получении wallet: {e}")
+        logger.error(f"Ошибка при получении кошелька с ID {uuid_wallet}: {e}")
         return None
 
 
@@ -45,14 +48,14 @@ async def get_wallet_by_email(
         Wallet | None: Найденный кошелёк или None, если не найден.
     """
     try:
-        stmt = select(Wallet).where(Wallet.email == email)
-        wallet = await session.scalar(stmt)
-        if not wallet:
-            logger.info(f"Wallet с email: {email} не найден")
-            return None
-        return wallet
+        async with session.begin():
+            stmt = select(Wallet).where(Wallet.email == email)
+            wallet = await session.scalar(stmt)
+            if not wallet:
+                logger.debug(f"Кошелёк с email {email} не найден")
+            return wallet
     except SQLAlchemyError as e:
-        logger.error(f"Ошибка при получении wallet: {e}")
+        logger.error(f"Ошибка при получении кошелька с email {email}: {e}")
         return None
 
 
@@ -71,16 +74,16 @@ async def create_wallet_by_email(
         Wallet | None: Созданный кошелёк или None, если создание не удалось.
     """
     try:
-        existing_wallet = await get_wallet_by_email(session, email)
-        if existing_wallet is not None:
-            logger.info(f"Wallet с email {email} существует")
-            return None
-        wallet = Wallet(email=email)
-        session.add(wallet)
-        await session.commit()
-        logger.info(f"Wallet с email {email} создан")
-        return wallet
-    except SQLAlchemyError as e:
+        async with session.begin():
+            wallet = Wallet(email=email)
+            session.add(wallet)
+            await session.commit()
+            logger.debug(f"Кошелёк с email {email} успешно создан")
+            return wallet
+    except IntegrityError:
         await session.rollback()
-        logger.error(f"Ошибка при создании wallet: {e}")
+        logger.debug(f"Кошелёк с email {email} уже существует")
         return None
+    except SQLAlchemyError:
+        await session.rollback()
+        raise
