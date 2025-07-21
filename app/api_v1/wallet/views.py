@@ -1,12 +1,12 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import db_helper
 from app.crud.base import test_connection
-from app.crud.wallet import create_wallet, get_wallet_by_id
+from app.crud.wallet import create_wallet_by_email, get_wallet_by_id
 
 router = APIRouter(tags=["Wallet"])
 
@@ -34,11 +34,14 @@ async def get_wallet(
     return {"message": "Not found"}
 
 
-@router.post("/create-wallet")
-async def create_wallet_at_db(
-    name: str,
+@router.post("/create-wallet", status_code=status.HTTP_201_CREATED)
+async def create_wallet(
+    email: str,
     session: Annotated[AsyncSession, Depends(db_helper.sesion_getter)],
 ):
-    wallet = await create_wallet(session, name)
+    wallet = await create_wallet_by_email(session, email)
+    if wallet is None:
+
+        return {"message": "Не удалось создать wallet"}
 
     return {"message": wallet}

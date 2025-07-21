@@ -17,7 +17,7 @@ class OperationType(enum.Enum):
 class Wallet(Base):
     __tablename__ = "wallets"
 
-    name: Mapped[str] = mapped_column(String(30), nullable=False)
+    email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     balance: Mapped[Decimal] = mapped_column(
         Numeric(19, 4),
         nullable=False,

@@ -38,3 +38,5 @@ lint.select = [
     "C4",
     "RUF",
 ]
+
+lint.ignore = ["RUF001"]
