@@ -12,31 +12,37 @@ async def get_wallet_by_id(
     session: AsyncSession,
     uuid_wallet: uuid.UUID,
 ) -> Wallet | None:
-    """_summary_
+    """
+    Получает кошелёк по его уникальному идентификатору (UUID).
 
     Args:
-        session (AsyncSession): _description_
-        uuid_wallet (uuid.UUID): _description_
+        session (AsyncSession): Асинхронная сессия SQLAlchemy.
+        uuid_wallet (uuid.UUID): UUID кошелька для поиска.
 
     Returns:
-        Wallet | None: _description_
+        Wallet | None: Найденный кошелёк или None, если не найден.
     """
-    stmt = select(Wallet).where(Wallet.id == uuid_wallet)
-    return await session.scalar(stmt)
+    try:
+        stmt = select(Wallet).where(Wallet.id == uuid_wallet)
+        return await session.scalar(stmt)
+    except SQLAlchemyError as e:
+        logger.error(f"Ошибка при получении wallet: {e}")
+        return None
 
 
 async def get_wallet_by_email(
     session: AsyncSession,
     email: str,
-) -> None | Wallet:
-    """_summary_
+) -> Wallet | None:
+    """
+    Получает кошелёк по email.
 
     Args:
-        session (AsyncSession): _description_
-        email (str): _description_
+        session (AsyncSession): Асинхронная сессия SQLAlchemy.
+        email (str): Email для поиска кошелька.
 
     Returns:
-        None | Wallet: _description_
+        Wallet | None: Найденный кошелёк или None, если не найден.
     """
     try:
         stmt = select(Wallet).where(Wallet.email == email)
@@ -53,15 +59,16 @@ async def get_wallet_by_email(
 async def create_wallet_by_email(
     session: AsyncSession,
     email: str,
-) -> Wallet:
-    """_summary_
+) -> Wallet | None:
+    """
+    Создаёт новый кошелёк с указанным email, если такой email ещё не используется.
 
     Args:
-        session (AsyncSession): _description_
-        email (str): _description_
+        session (AsyncSession): Асинхронная сессия SQLAlchemy.
+        email (str): Email, связанный с кошельком.
 
     Returns:
-        Wallet: _description_
+        Wallet | None: Созданный кошелёк или None, если создание не удалось.
     """
     try:
         existing_wallet = await get_wallet_by_email(session, email)

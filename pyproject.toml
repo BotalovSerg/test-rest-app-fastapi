@@ -39,4 +39,4 @@ lint.select = [
     "RUF",
 ]
 
-lint.ignore = ["RUF001"]
+lint.ignore = ["RUF001", "RUF002"]
