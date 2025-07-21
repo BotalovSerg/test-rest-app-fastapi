@@ -1,7 +1,7 @@
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class WalletBase(BaseModel):
@@ -10,9 +10,7 @@ class WalletBase(BaseModel):
 
 class WalletCreateResponse(WalletBase):
     email: str
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class WalletResponse(WalletBase):
