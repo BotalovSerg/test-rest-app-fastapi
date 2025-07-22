@@ -64,5 +64,5 @@ Wallet API — это REST API, разработанное на Python с исп
 4. Запустить через docker compose:
 
     ```bash
-    docker compose up --buld -d
+    docker compose up --build -d
     ```
