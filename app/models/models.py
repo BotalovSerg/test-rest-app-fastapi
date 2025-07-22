@@ -19,7 +19,7 @@ class Wallet(Base):
 
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     balance: Mapped[Decimal] = mapped_column(
-        Numeric(19, 4),
+        Numeric(19, 2),
         nullable=False,
         default=0.0,
         server_default="0.0",
@@ -44,7 +44,7 @@ class Operation(Base):
         nullable=False,
     )
     amount: Mapped[Decimal] = mapped_column(
-        Numeric(19, 4),
+        Numeric(19, 2),
         nullable=False,
     )
     wallet: Mapped["Wallet"] = relationship(

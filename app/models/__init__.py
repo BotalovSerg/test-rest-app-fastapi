@@ -1,7 +1,9 @@
 __all__ = (
     "Base",
+    "Operation",
+    "OperationType",
     "Wallet",
 )
 
 from .base import Base
-from .models import Wallet
+from .models import Operation, OperationType, Wallet

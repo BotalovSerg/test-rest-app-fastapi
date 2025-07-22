@@ -6,10 +6,19 @@ from pydantic import EmailStr
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api_v1.wallet.schemas import WalletCreateResponse, WalletResponse
+from app.api_v1.wallet.schemas import (
+    OperationCreate,
+    OperationResponse,
+    WalletCreateResponse,
+    WalletResponse,
+)
 from app.core import db_helper, logger
 from app.crud.base import test_connection
-from app.crud.wallet import create_wallet_by_email, get_wallet_by_id
+from app.crud.wallet import (
+    create_wallet_by_email,
+    get_wallet_by_id,
+    update_wallet_balance,
+)
 
 router = APIRouter(tags=["Wallet"])
 
@@ -18,12 +27,50 @@ router = APIRouter(tags=["Wallet"])
 async def health_check(
     session: Annotated[AsyncSession, Depends(db_helper.sesion_getter)],
 ):
-    await test_connection(session)
-    return {"messege": "OK"}
+    try:
+        await test_connection(session)
+        return {"messege": "OK"}
+    except Exception as e:
+        logger.error(f"Error connect with db: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Внутренняя ошибка сервера",
+        )
 
 
-@router.post("/{wallet_id}/operation")
-async def perform_operation(): ...
+@router.post(
+    "/{wallet_id}/operation",
+    response_model=OperationResponse,
+)
+async def create_operation(
+    wallet_id: uuid.UUID,
+    operation: OperationCreate,
+    session: Annotated[AsyncSession, Depends(db_helper.sesion_getter)],
+):
+    """Выполняет операцию (пополнение или снятие) на кошельке.
+
+    Args:
+        wallet_id: UUID кошелька.
+        operation: Данные операции (тип: 'DEPOSIT', 'WITHDRAW' и сумма).
+        session: Асинхронная сессия SQLAlchemy.
+
+    Returns:
+        OperationResponse: Данные созданной операции.
+
+    Raises:
+        HTTPException:
+            - 404: Если кошелёк не найден.
+            - 422: Если недостаточно средств.
+            - 500: Если произошла ошибка сервера.
+    """
+    try:
+        return await update_wallet_balance(session, wallet_id, operation)
+    except SQLAlchemyError as e:
+        logger.error(f"Ошибка в эндпоинте create_operation для кошелька {wallet_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Внутренняя ошибка сервера",
+        )
 
 
 @router.get("/{wallet_id}", response_model=WalletResponse)
