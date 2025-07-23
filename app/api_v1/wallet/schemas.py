@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.models.models import OperationType
 
@@ -32,3 +32,7 @@ class OperationResponse(BaseModel):
     amount: Decimal
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+
+class EmailWallet(BaseModel):
+    email: EmailStr

@@ -2,11 +2,11 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import EmailStr
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api_v1.wallet.schemas import (
+    EmailWallet,
     OperationCreate,
     OperationResponse,
     WalletCreateResponse,
@@ -108,7 +108,7 @@ async def get_wallet(
     response_model=WalletCreateResponse,
 )
 async def create_wallet(
-    email: EmailStr,
+    data: EmailWallet,
     session: Annotated[AsyncSession, Depends(db_helper.sesion_getter)],
 ) -> WalletCreateResponse:
     """Создаёт новый кошелёк с указанным email.
@@ -127,13 +127,13 @@ async def create_wallet(
             - 500: Если произошла ошибка сервера.
     """
     try:
-        wallet = await create_wallet_by_email(session, email)
+        wallet = await create_wallet_by_email(session, data.email)
         if wallet is None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Кошелёк с таким email уже существует",
             )
-        logger.info(f"create_wallet: Кошелёк создан для email {email}")
+        logger.info(f"create_wallet: Кошелёк создан для email {data.email}")
         return WalletCreateResponse(id=wallet.id, email=wallet.email)
     except ValueError:
         raise HTTPException(
@@ -141,7 +141,7 @@ async def create_wallet(
             detail="Некорректный формат email",
         )
     except SQLAlchemyError as e:
-        logger.error(f"Ошибка при создании кошелька для email {email}: {e}")
+        logger.error(f"Ошибка при создании кошелька для email {data.email}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Внутренняя ошибка сервера",
